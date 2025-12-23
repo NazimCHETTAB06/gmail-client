@@ -154,7 +154,7 @@ REMPLIR LE FORMULAIRE:
 │   main                                                        │
 │                                                               │
 │ Build Command:                                                │
-│   cd backend && npm install && npx prisma db push --skip-generate │
+│   cd backend && npm install && npx prisma generate           │
 │                                                               │
 │ Start Command:                                                │
 │   cd backend && npm start                                    │
