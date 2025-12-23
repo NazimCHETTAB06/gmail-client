@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: gmail-client-api
+    env: node
+    plan: free
+    runtime: node-18
+    buildCommand: |
+      cd backend && \
+      npm install && \
+      npx prisma generate && \
+      npx prisma db push --skip-generate
+    startCommand: cd backend && npm start
+    preDeployCommand: npx prisma db push --skip-generate
+    
+    envVars:
+      - key: DATABASE_URL
+        scope: build
+      - key: GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+      - key: JWT_SECRET
+      - key: FRONTEND_URL
+        fromService:
+          name: gmail-client-web
+          property: url
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+databases:
+  - name: gmail_client_db
+    databaseName: gmail_client_db
+    plan: free
+    version: 15
+    region: ohio
+    ipAllowList: [] # Allow all IPs

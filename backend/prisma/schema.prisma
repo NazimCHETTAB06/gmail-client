@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Relations
+  accounts  MailAccount[]
+  emails    Email[]
+}
+
+model MailAccount {
+  id           Int    @id @default(autoincrement())
+  provider     String // "gmail"
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  
+  @@unique([userId, provider])
+}
+
+model Email {
+  id         Int      @id @default(autoincrement())
+  gmailId    String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     Int
+  sender     String
+  subject    String
+  snippet    String
+  body       String?
+  receivedAt DateTime
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([receivedAt])
+}

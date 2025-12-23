@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gmail Client</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>📧 Gmail</h2>
+                <button id="logoutBtn" class="btn btn-logout">Déconnexion</button>
+            </div>
+            <div class="sidebar-actions">
+                <button id="syncBtn" class="btn btn-sync">🔄 Synchroniser</button>
+                <button id="connectGmailBtn" class="btn btn-connect-gmail">🔑 Connecter Gmail</button>
+            </div>
+            <div id="userInfo" class="user-info"></div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main-content">
+            <div class="emails-container">
+                <div class="emails-header">
+                    <h2>📬 Inbox</h2>
+                    <div class="emails-count">
+                        <span id="emailCount">0</span> emails
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div id="loadingState" class="loading-state" style="display: none;">
+                    <p>Chargement...</p>
+                </div>
+
+                <!-- Empty state -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <p>Aucun email trouvé. Cliquez sur "Synchroniser" pour importer vos emails.</p>
+                </div>
+
+                <!-- Emails list -->
+                <div id="emailsList" class="emails-list"></div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="pagination" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

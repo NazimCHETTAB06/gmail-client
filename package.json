@@ -1,0 +1,17 @@
+{
+  "name": "gmail-client",
+  "version": "1.0.0",
+  "description": "Complete Gmail client with OAuth2, email sync, and web interface",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && python -m http.server 5500",
+    "build:backend": "cd backend && npm install",
+    "build:frontend": "echo 'Frontend is static HTML/CSS/JS'",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && python -m http.server 5500"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
