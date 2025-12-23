@@ -4,13 +4,8 @@ services:
     env: node
     plan: free
     runtime: node-18
-    buildCommand: |
-      cd backend && \
-      npm install && \
-      npx prisma generate && \
-      npx prisma db push --skip-generate
+    buildCommand: cd backend && npm install && npx prisma db push
     startCommand: cd backend && npm start
-    preDeployCommand: npx prisma db push --skip-generate
     
     envVars:
       - key: DATABASE_URL
