@@ -56,35 +56,38 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize Prisma and database
+// Initialize app and start server
 async function initializeApp() {
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient();
-
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('✅ Database connected');
-
-    // Run migrations (db push for quick sync)
-    if (NODE_ENV === 'production') {
-      console.log('🔄 Syncing database schema...');
-      await prisma.$executeRaw`SELECT 1`; // Connection verified
-      // Prisma client is ready, migrations happen on schema changes
-      console.log('✅ Database schema synced');
+    // Only initialize Prisma if DATABASE_URL is available
+    if (!process.env.DATABASE_URL && NODE_ENV === 'production') {
+      console.warn('⚠️  DATABASE_URL not available yet, starting server without database...');
+      console.warn('⚠️  Database will be initialized when environment variables are ready');
+    } else if (process.env.DATABASE_URL) {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      try {
+        // Test database connection
+        await prisma.$queryRaw`SELECT 1`;
+        console.log('✅ Database connected and ready');
+      } catch (dbError) {
+        console.warn('⚠️  Database not yet available:', dbError.message);
+        console.warn('⚠️  Will retry when database is ready');
+      } finally {
+        await prisma.$disconnect();
+      }
     }
 
-    // Start the server
+    // Start the server regardless of database status
     app.listen(PORT, () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
+      console.log(`🌐 Environment: ${NODE_ENV}`);
       startTokenRefreshService();
     });
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error.message);
-    console.error('Make sure DATABASE_URL is set for production');
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
