@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { refreshAccessToken } = require('./google');
+const { refreshAccessToken } = require('../config/google');
 
 const prisma = new PrismaClient();
 
