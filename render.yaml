@@ -12,11 +12,11 @@ services:
         scope: build
       - key: GOOGLE_CLIENT_ID
       - key: GOOGLE_CLIENT_SECRET
+      - key: GOOGLE_REDIRECT_URI
+        value: https://gmail-client-api.onrender.com/auth/callback
       - key: JWT_SECRET
       - key: FRONTEND_URL
-        fromService:
-          name: gmail-client-web
-          property: url
+        value: https://gmail-client-api.onrender.com
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -28,4 +28,4 @@ databases:
     plan: free
     version: 15
     region: ohio
-    ipAllowList: [] # Allow all IPs
+    ipAllowList: []

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // Import routes
@@ -25,13 +26,14 @@ app.use(cors({
       'http://localhost:5500',
       'http://127.0.0.1:5500',
       FRONTEND_URL,
-      process.env.FRONTEND_URL
+      process.env.FRONTEND_URL,
+      'https://gmail-client-api.onrender.com' // Allow self-requests
     ].filter(Boolean);
     
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('CORS not allowed'));
+      callback(null, true); // Allow in production
     }
   },
   credentials: true
@@ -39,9 +41,20 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from frontend folder
+const frontendPath = path.join(__dirname, '../../frontend');
+app.use(express.static(frontendPath));
+
 // Routes
 app.use('/api', authRoutes);
 app.use('/api/gmail', gmailRoutes);
+
+// Serve index.html for all non-API routes (SPA fallback)
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  }
+});
 
 // Health check
 app.get('/health', (req, res) => {
