@@ -6,6 +6,7 @@ require('dotenv').config();
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const gmailRoutes = require('./routes/gmailRoutes');
+const { handleGoogleCallback } = require('./controllers/authController');
 
 // Import services
 const { startTokenRefreshService } = require('./services/tokenService');
@@ -48,6 +49,9 @@ app.use(express.static(frontendPath));
 // Routes
 app.use('/api', authRoutes);
 app.use('/api/gmail', gmailRoutes);
+
+// OAuth Callback Routes (before SPA fallback)
+app.get('/auth/callback', handleGoogleCallback);
 
 // Serve index.html for all non-API routes (SPA fallback)
 app.get('*', (req, res) => {

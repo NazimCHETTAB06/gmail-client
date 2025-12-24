@@ -127,9 +127,89 @@ const getGoogleAuthUrl = async (req, res) => {
   }
 };
 
+/**
+ * Callback après authentification Google
+ */
+const handleGoogleCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code not found' });
+    }
+
+    // Échanger le code contre les tokens
+    const { getTokensFromCode } = require('../config/google');
+    const tokens = await getTokensFromCode(code);
+
+    // Créer ou récupérer l'utilisateur Google
+    const { email } = tokens;
+    
+    // Pour simplifier, créer un utilisateur avec email Google
+    let user = await prisma.user.findFirst({
+      where: {
+        accounts: {
+          some: {
+            provider: 'google',
+            providerAccountId: tokens.sub || code
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      // Créer un nouvel utilisateur
+      user = await prisma.user.create({
+        data: {
+          email: email || `google-${Date.now()}@gmail.com`,
+          password: null, // Google auth doesn't need password
+          accounts: {
+            create: {
+              provider: 'google',
+              providerAccountId: tokens.sub || code,
+              accessToken: tokens.access_token,
+              refreshToken: tokens.refresh_token,
+              expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
+            }
+          }
+        },
+        include: { accounts: true }
+      });
+    } else {
+      // Mettre à jour les tokens
+      await prisma.account.updateMany({
+        where: {
+          userId: user.id,
+          provider: 'google'
+        },
+        data: {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
+        }
+      });
+    }
+
+    // Générer JWT pour la session
+    const jwtToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Rediriger vers le dashboard avec le token
+    const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard.html?token=${jwtToken}&userId=${user.id}`;
+    res.redirect(dashboardUrl);
+  } catch (err) {
+    console.error('Google callback error:', err);
+    res.redirect(`${process.env.FRONTEND_URL}/?error=${encodeURIComponent(err.message)}`);
+  }
+};
+
 module.exports = {
   register,
   login,
   getCurrentUser,
-  getGoogleAuthUrl
+  getGoogleAuthUrl,
+  handleGoogleCallback
 };

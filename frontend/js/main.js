@@ -490,13 +490,35 @@ function formatDate(dateString) {
 }
 
 // ========================================
+// Callback Handler
+// ========================================
+
+/**
+ * Gérer le callback de redirection (token dans l'URL)
+ */
+function handleAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const userId = params.get('userId');
+    
+    if (token && userId) {
+        // Sauvegarder le token et rediriger
+        localStorage.setItem('token', token);
+        localStorage.setItem('userId', userId);
+        
+        // Nettoyer l'URL et rediriger vers le dashboard
+        window.location.href = `${FRONTEND_BASE_URL}/dashboard.html`;
+    }
+}
+
+// ========================================
 // Event Listeners
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Page d'authentification
-    if (document.getElementById('loginForm')) {
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
+    // Gérer le callback d'authentification Google
+    handleAuthCallback();
+    
             e.preventDefault();
             login();
         });
