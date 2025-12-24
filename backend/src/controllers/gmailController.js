@@ -31,7 +31,7 @@ const handleCallback = async (req, res) => {
     const tokens = await getTokensFromCode(code);
     
     // Sauvegarder les tokens en base de données
-    await prisma.mailAccount.upsert({
+    await prisma.account.upsert({
       where: {
         userId_provider: {
           userId: parseInt(userId),
@@ -46,6 +46,7 @@ const handleCallback = async (req, res) => {
       create: {
         userId: parseInt(userId),
         provider: 'gmail',
+        providerAccountId: tokens.sub || code,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
         expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
@@ -67,12 +68,10 @@ const fetchAndSaveEmails = async (req, res) => {
     const userId = req.userId;
     
     // Récupérer le compte Gmail de l'utilisateur
-    const mailAccount = await prisma.mailAccount.findUnique({
+    const mailAccount = await prisma.account.findFirst({
       where: {
-        userId_provider: {
-          userId,
-          provider: 'gmail'
-        }
+        userId,
+        provider: 'gmail'
       }
     });
     
@@ -87,7 +86,7 @@ const fetchAndSaveEmails = async (req, res) => {
         const newCredentials = await refreshAccessToken(mailAccount.refreshToken);
         accessToken = newCredentials.access_token;
         
-        await prisma.mailAccount.update({
+        await prisma.account.update({
           where: { id: mailAccount.id },
           data: {
             accessToken: newCredentials.access_token,

@@ -11,7 +11,7 @@ async function refreshExpiredTokens() {
         const now = new Date();
         
         // Trouver tous les comptes avec des tokens expirés
-        const expiredAccounts = await prisma.mailAccount.findMany({
+        const expiredAccounts = await prisma.account.findMany({
             where: {
                 expiresAt: {
                     lte: new Date(now.getTime() + 5 * 60 * 1000) // Expirés ou expiration dans < 5 min
@@ -28,7 +28,7 @@ async function refreshExpiredTokens() {
             try {
                 const newCredentials = await refreshAccessToken(account.refreshToken);
                 
-                await prisma.mailAccount.update({
+await prisma.account.update({
                     where: { id: account.id },
                     data: {
                         accessToken: newCredentials.access_token,
