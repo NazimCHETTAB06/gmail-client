@@ -2,8 +2,14 @@
 // API Configuration
 // ========================================
 
-const API_BASE_URL = 'http://localhost:3000/api';
-const FRONTEND_BASE_URL = 'http://localhost:5500/frontend';
+// Déterminer l'URL de l'API en fonction de l'environnement
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3000/api'
+  : `${window.location.origin}/api`;
+
+const FRONTEND_BASE_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5500/frontend'
+  : window.location.origin;
 
 // ========================================
 // Authentication Functions
@@ -62,6 +68,30 @@ async function register() {
         console.error('Register error:', error);
         errorDiv.textContent = 'Erreur réseau';
         errorDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Se connecter avec Google OAuth
+ */
+async function loginWithGoogle() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/google`, {
+            method: 'GET'
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Erreur lors de la connexion Google');
+            return;
+        }
+
+        // Rediriger vers Google OAuth
+        window.location.href = data.authUrl;
+    } catch (error) {
+        console.error('Login with Google error:', error);
+        alert('Erreur lors de la connexion Google');
     }
 }
 

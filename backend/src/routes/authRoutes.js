@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getCurrentUser } = require('../controllers/authController');
+const { register, login, getCurrentUser, getGoogleAuthUrl } = require('../controllers/authController');
 const verifyToken = require('../middleware/verifyToken');
 
 /**
@@ -20,5 +20,11 @@ router.post('/login', login);
  * Récupérer l'utilisateur actuel (protégé)
  */
 router.get('/me', verifyToken, getCurrentUser);
+
+/**
+ * GET /api/auth/google
+ * Obtenir l'URL d'authentification Google
+ */
+router.get('/auth/google', getGoogleAuthUrl);
 
 module.exports = router;

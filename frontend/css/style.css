@@ -148,6 +148,21 @@ html, body {
     box-shadow: var(--shadow);
 }
 
+.btn-google {
+    width: 100%;
+    background-color: #ffffff;
+    color: #1f2937;
+    border: 2px solid #e5e7eb;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+.btn-google:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: var(--shadow);
+}
+
 .btn-logout,
 .btn-sync,
 .btn-connect-gmail {

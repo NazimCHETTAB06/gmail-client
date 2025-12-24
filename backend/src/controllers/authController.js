@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { getAuthUrl } = require('../config/google');
 
 const prisma = new PrismaClient();
 
@@ -113,8 +114,22 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+/**
+ * Obtenir l'URL d'authentification Google
+ */
+const getGoogleAuthUrl = async (req, res) => {
+  try {
+    const authUrl = getAuthUrl();
+    res.json({ authUrl });
+  } catch (err) {
+    console.error('Get Google auth URL error:', err);
+    res.status(500).json({ error: 'Failed to get Google auth URL' });
+  }
+};
+
 module.exports = {
   register,
   login,
-  getCurrentUser
+  getCurrentUser,
+  getGoogleAuthUrl
 };
