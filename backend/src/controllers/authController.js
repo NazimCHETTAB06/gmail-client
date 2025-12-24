@@ -135,59 +135,80 @@ const handleGoogleCallback = async (req, res) => {
     const { code } = req.query;
 
     if (!code) {
-      return res.status(400).json({ error: 'Authorization code not found' });
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=No authorization code`);
     }
 
     // Échanger le code contre les tokens
     const { getTokensFromCode } = require('../config/google');
-    const tokens = await getTokensFromCode(code);
-
-    // Créer ou récupérer l'utilisateur Google
-    const { email } = tokens;
+    let tokens;
     
-    // Pour simplifier, créer un utilisateur avec email Google
-    let user = await prisma.user.findFirst({
-      where: {
-        accounts: {
-          some: {
-            provider: 'google',
-            providerAccountId: tokens.sub || code
-          }
-        }
-      }
+    try {
+      tokens = await getTokensFromCode(code);
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=Failed to get tokens from Google`);
+    }
+
+    if (!tokens || !tokens.access_token) {
+      return res.redirect(`${process.env.FRONTEND_URL}/?error=No access token received`);
+    }
+
+    // Utiliser l'email du token ou générer un
+    const email = tokens.email || `google-${tokens.sub || Date.now()}@gmail.com`;
+    const googleId = tokens.sub || code;
+
+    // Chercher ou créer l'utilisateur
+    let user = await prisma.user.findUnique({
+      where: { email }
     });
 
     if (!user) {
       // Créer un nouvel utilisateur
       user = await prisma.user.create({
         data: {
-          email: email || `google-${Date.now()}@gmail.com`,
+          email: email,
           password: null, // Google auth doesn't need password
           accounts: {
             create: {
               provider: 'google',
-              providerAccountId: tokens.sub || code,
+              providerAccountId: googleId,
               accessToken: tokens.access_token,
-              refreshToken: tokens.refresh_token,
+              refreshToken: tokens.refresh_token || null,
               expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
             }
           }
-        },
-        include: { accounts: true }
+        }
       });
     } else {
-      // Mettre à jour les tokens
-      await prisma.account.updateMany({
+      // Mettre à jour ou créer le compte Google
+      const existingAccount = await prisma.account.findFirst({
         where: {
           userId: user.id,
           provider: 'google'
-        },
-        data: {
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
         }
       });
+
+      if (existingAccount) {
+        await prisma.account.update({
+          where: { id: existingAccount.id },
+          data: {
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token || existingAccount.refreshToken,
+            expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
+          }
+        });
+      } else {
+        await prisma.account.create({
+          data: {
+            userId: user.id,
+            provider: 'google',
+            providerAccountId: googleId,
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token || null,
+            expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null
+          }
+        });
+      }
     }
 
     // Générer JWT pour la session
