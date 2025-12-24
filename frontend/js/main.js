@@ -2,7 +2,6 @@
 // API Configuration
 // ========================================
 
-// Déterminer l'URL de l'API en fonction de l'environnement
 const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000/api'
   : `${window.location.origin}/api`;
@@ -11,13 +10,83 @@ const FRONTEND_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:5500/frontend'
   : window.location.origin;
 
+console.log('🔧 API_BASE_URL:', API_BASE_URL);
+console.log('🔧 FRONTEND_BASE_URL:', FRONTEND_BASE_URL);
+
 // ========================================
-// Authentication Functions
+// Google OAuth Login
 // ========================================
 
-/**
- * S'inscrire
- */
+function loginWithGoogle() {
+    console.log('🔷 Clicking Google login...');
+    console.log('🔷 Fetching from:', `${API_BASE_URL}/auth/google`);
+    
+    fetch(`${API_BASE_URL}/auth/google`)
+        .then(response => {
+            console.log('🔷 Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔷 Response data:', data);
+            if (data.authUrl) {
+                console.log('🔷 Redirecting to:', data.authUrl);
+                window.location.href = data.authUrl;
+            } else {
+                alert('❌ Error: No authUrl received');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Google login error:', error);
+            alert('❌ Error: ' + error.message);
+        });
+}
+
+// ========================================
+// Regular Login
+// ========================================
+
+async function login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    
+    errorDiv.style.display = 'none';
+
+    if (!email || !password) {
+        errorDiv.textContent = 'Veuillez remplir tous les champs';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            errorDiv.textContent = data.error || 'Erreur lors de la connexion';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.userId);
+        window.location.href = `${FRONTEND_BASE_URL}/dashboard.html`;
+    } catch (error) {
+        console.error('Login error:', error);
+        errorDiv.textContent = 'Erreur réseau';
+        errorDiv.style.display = 'block';
+    }
+}
+
+// ========================================
+// Register
+// ========================================
+
 async function register() {
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
@@ -58,7 +127,6 @@ async function register() {
 
         successDiv.textContent = 'Inscription réussie! Vous pouvez maintenant vous connecter.';
         successDiv.style.display = 'block';
-        
         document.getElementById('registerForm').reset();
         
         setTimeout(() => {
@@ -71,77 +139,48 @@ async function register() {
     }
 }
 
-/**
- * Se connecter avec Google OAuth
- */
-async function loginWithGoogle() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/auth/google`, {
-            method: 'GET'
-        });
+// ========================================
+// Tab Management
+// ========================================
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-            alert(data.error || 'Erreur lors de la connexion Google');
-            return;
-        }
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
 
-        // Rediriger vers Google OAuth
-        window.location.href = data.authUrl;
-    } catch (error) {
-        console.error('Login with Google error:', error);
-        alert('Erreur lors de la connexion Google');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const selectedTab = document.getElementById(tabName);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
     }
+
+    document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
 }
 
-/**
- * Se connecter
- */
-async function login() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
+// ========================================
+// Auth Callback Handler
+// ========================================
 
-    const errorDiv = document.getElementById('loginError');
-    errorDiv.style.display = 'none';
-
-    if (!email || !password) {
-        errorDiv.textContent = 'Veuillez remplir tous les champs';
-        errorDiv.style.display = 'block';
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            errorDiv.textContent = data.error || 'Erreur lors de la connexion';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        // Sauvegarder le token
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userId', data.userId);
-        
-        // Rediriger vers le dashboard
+function handleAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const userId = params.get('userId');
+    
+    if (token && userId) {
+        console.log('✅ Auth callback detected, saving token');
+        localStorage.setItem('token', token);
+        localStorage.setItem('userId', userId);
         window.location.href = `${FRONTEND_BASE_URL}/dashboard.html`;
-    } catch (error) {
-        console.error('Login error:', error);
-        errorDiv.textContent = 'Erreur réseau';
-        errorDiv.style.display = 'block';
     }
 }
 
-/**
- * Se déconnecter
- */
+// ========================================
+// Logout
+// ========================================
+
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
@@ -149,118 +188,9 @@ function logout() {
 }
 
 // ========================================
-// Tab Functions
-// ========================================
-
-/**
- * Changer d'onglet
- */
-function switchTab(tabName) {
-    // Cacher tous les tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Déactiver tous les boutons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // Afficher le tab sélectionné
-    const selectedTab = document.getElementById(tabName);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-    }
-
-    // Activer le bouton sélectionné
-    document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
-}
-
-// ========================================
-// Gmail OAuth Functions
-// ========================================
-
-/**
- * Connecter Gmail via OAuth
- */
-async function connectGmail() {
-    const userId = localStorage.getItem('userId');
-    
-    if (!userId) {
-        alert('Veuillez d\'abord vous connecter');
-        window.location.href = `${FRONTEND_BASE_URL}/index.html`;
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/gmail/auth`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-            alert(data.error || 'Erreur');
-            return;
-        }
-
-        // Rediriger vers Google OAuth avec l'userId en paramètre
-        const authUrl = new URL(data.authUrl);
-        authUrl.searchParams.set('userId', userId);
-        window.location.href = authUrl.toString();
-    } catch (error) {
-        console.error('Connect Gmail error:', error);
-        alert('Erreur lors de la connexion à Gmail');
-    }
-}
-
-/**
- * Synchroniser les emails
- */
-async function syncEmails() {
-    const syncBtn = document.getElementById('syncBtn');
-    syncBtn.disabled = true;
-    syncBtn.textContent = '🔄 Synchronisation...';
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/gmail/fetch`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert(data.error || 'Erreur lors de la synchronisation');
-            syncBtn.disabled = false;
-            syncBtn.textContent = '🔄 Synchroniser';
-            return;
-        }
-
-        alert(`✅ ${data.count} emails synchronisés`);
-        syncBtn.disabled = false;
-        syncBtn.textContent = '🔄 Synchroniser';
-        
-        // Recharger la liste des emails
-        loadEmails();
-    } catch (error) {
-        console.error('Sync emails error:', error);
-        alert('Erreur lors de la synchronisation');
-        syncBtn.disabled = false;
-        syncBtn.textContent = '🔄 Synchroniser';
-    }
-}
-
-// ========================================
 // Dashboard Functions
 // ========================================
 
-/**
- * Charger les infos utilisateur
- */
 async function loadUserInfo() {
     try {
         const response = await fetch(`${API_BASE_URL}/me`, {
@@ -278,7 +208,7 @@ async function loadUserInfo() {
 
         const userInfoDiv = document.getElementById('userInfo');
         if (userInfoDiv) {
-            const gmailConnected = user.accounts.some(acc => acc.provider === 'gmail');
+            const gmailConnected = user.accounts && user.accounts.some(acc => acc.provider === 'gmail');
             userInfoDiv.innerHTML = `
                 <p><strong>${user.email}</strong></p>
                 <p style="font-size: 12px; margin-top: 10px;">
@@ -291,9 +221,6 @@ async function loadUserInfo() {
     }
 }
 
-/**
- * Charger la liste des emails
- */
 async function loadEmails(page = 1) {
     const emailsList = document.getElementById('emailsList');
     const loadingState = document.getElementById('loadingState');
@@ -323,8 +250,8 @@ async function loadEmails(page = 1) {
 
         if (loadingState) loadingState.style.display = 'none';
 
-        const emails = data.emails;
-        const pagination = data.pagination;
+        const emails = data.emails || [];
+        const pagination = data.pagination || { total: 0, pages: 1 };
 
         if (emails.length === 0) {
             if (emptyState) emptyState.style.display = 'block';
@@ -335,7 +262,6 @@ async function loadEmails(page = 1) {
         if (emptyState) emptyState.style.display = 'none';
         if (emailCount) emailCount.textContent = pagination.total;
 
-        // Afficher les emails
         if (emailsList) {
             emailsList.innerHTML = emails.map(email => `
                 <div class="email-item" onclick="openEmail(${email.id})">
@@ -347,7 +273,6 @@ async function loadEmails(page = 1) {
             `).join('');
         }
 
-        // Afficher la pagination
         const paginationDiv = document.getElementById('pagination');
         if (pagination.pages > 1) {
             let paginationHtml = '';
@@ -371,20 +296,10 @@ async function loadEmails(page = 1) {
     }
 }
 
-/**
- * Ouvrir un email
- */
 function openEmail(emailId) {
     window.location.href = `${FRONTEND_BASE_URL}/email.html?id=${emailId}`;
 }
 
-// ========================================
-// Email View Functions
-// ========================================
-
-/**
- * Charger et afficher un email spécifique
- */
 async function loadEmail() {
     const params = new URLSearchParams(window.location.search);
     const emailId = params.get('id');
@@ -423,30 +338,74 @@ async function loadEmail() {
                 <div class="email-full-body">${email.body}</div>
             </div>
         `;
-
-        // Ajouter l'ID de l'email au bouton de suppression
-        const deleteBtn = document.getElementById('deleteBtn');
-        if (deleteBtn) {
-            deleteBtn.onclick = () => deleteEmail(emailId);
-        }
     } catch (error) {
         console.error('Load email error:', error);
         document.getElementById('emailContent').innerHTML = '<p>Erreur réseau</p>';
     }
 }
 
-/**
- * Supprimer un email (local uniquement)
- */
-async function deleteEmail(emailId) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet email?')) return;
+async function connectGmail() {
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+        alert('Veuillez d\'abord vous connecter');
+        window.location.href = `${FRONTEND_BASE_URL}/index.html`;
+        return;
+    }
 
     try {
-        // Note: Il faudrait implémenter l'endpoint de suppression au backend
-        alert('Suppression non implémentée sur cette version');
+        const response = await fetch(`${API_BASE_URL}/gmail/auth`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Erreur');
+            return;
+        }
+
+        const authUrl = new URL(data.authUrl);
+        authUrl.searchParams.set('userId', userId);
+        window.location.href = authUrl.toString();
     } catch (error) {
-        console.error('Delete email error:', error);
-        alert('Erreur lors de la suppression');
+        console.error('Connect Gmail error:', error);
+        alert('Erreur lors de la connexion à Gmail');
+    }
+}
+
+async function syncEmails() {
+    const syncBtn = document.getElementById('syncBtn');
+    syncBtn.disabled = true;
+    syncBtn.textContent = '🔄 Synchronisation...';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/gmail/fetch`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || 'Erreur lors de la synchronisation');
+            syncBtn.disabled = false;
+            syncBtn.textContent = '🔄 Synchroniser';
+            return;
+        }
+
+        alert(`✅ ${data.count} emails synchronisés`);
+        syncBtn.disabled = false;
+        syncBtn.textContent = '🔄 Synchroniser';
+        loadEmails();
+    } catch (error) {
+        console.error('Sync emails error:', error);
+        alert('Erreur lors de la synchronisation');
+        syncBtn.disabled = false;
+        syncBtn.textContent = '🔄 Synchroniser';
     }
 }
 
@@ -454,18 +413,12 @@ async function deleteEmail(emailId) {
 // Utility Functions
 // ========================================
 
-/**
- * Échapper les caractères HTML
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-/**
- * Formater une date
- */
 function formatDate(dateString) {
     const date = new Date(dateString);
     const now = new Date();
@@ -490,35 +443,20 @@ function formatDate(dateString) {
 }
 
 // ========================================
-// Callback Handler
-// ========================================
-
-/**
- * Gérer le callback de redirection (token dans l'URL)
- */
-function handleAuthCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const userId = params.get('userId');
-    
-    if (token && userId) {
-        // Sauvegarder le token et rediriger
-        localStorage.setItem('token', token);
-        localStorage.setItem('userId', userId);
-        
-        // Nettoyer l'URL et rediriger vers le dashboard
-        window.location.href = `${FRONTEND_BASE_URL}/dashboard.html`;
-    }
-}
-
-// ========================================
 // Event Listeners
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Gérer le callback d'authentification Google
+    console.log('✅ DOM Content Loaded');
+    
+    // Handle auth callback
     handleAuthCallback();
     
+    // Login page
+    if (document.getElementById('loginForm')) {
+        console.log('✅ Login form detected');
+        
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             login();
         });
@@ -535,8 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Page de dashboard
+    // Dashboard page
     if (document.getElementById('syncBtn')) {
+        console.log('✅ Dashboard detected');
+        
         loadUserInfo();
         loadEmails();
 
@@ -544,12 +484,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('syncBtn').addEventListener('click', syncEmails);
         document.getElementById('connectGmailBtn').addEventListener('click', connectGmail);
         
-        // Recharger les infos utilisateur toutes les 30 secondes
         setInterval(loadUserInfo, 30000);
     }
 
-    // Page de lecture d'email
+    // Email page
     if (document.getElementById('emailContent') && window.location.pathname.includes('email.html')) {
+        console.log('✅ Email page detected');
         loadEmail();
     }
 });
+
+console.log('✅ main.js loaded successfully');
